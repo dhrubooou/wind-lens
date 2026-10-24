@@ -69,16 +69,40 @@ export const ForecastEvolutionView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           <div>
             <input
               type="date"
-              min="2026-01-01"
-              max="2026-01-31"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
+            <div className="flex items-center space-x-1.5 mt-1 text-[11px]">
+              <span className="text-slate-400">Quick:</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDate('2026-10-24')}
+                className="text-emerald-700 hover:underline font-medium"
+              >
+                ⚡ Oct 24
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDate('2026-10-23')}
+                className="text-emerald-700 hover:underline font-medium"
+              >
+                ⚡ Oct 23
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDate('2026-01-05')}
+                className="text-slate-600 hover:underline font-medium"
+              >
+                📁 Jan 5
+              </button>
+            </div>
           </div>
           <div>
             <select

@@ -18,6 +18,7 @@ import { ForecastErrorChart } from '../components/charts/ForecastErrorChart';
 import { DailySummaryTable } from '../components/tables/DailySummaryTable';
 import { LoadingState } from '../components/common/LoadingState';
 import { ErrorState } from '../components/common/ErrorState';
+import { EmptyState } from '../components/common/EmptyState';
 
 interface ExecutiveDashboardProps {
   startDate: string;
@@ -25,6 +26,8 @@ interface ExecutiveDashboardProps {
   cutoffTime: string;
   cutoffType: string;
   onCutoffChange: (time: string, type: string) => void;
+  refreshKey?: number;
+  onSyncComplete?: () => void;
 }
 
 export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
@@ -33,12 +36,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   cutoffTime,
   cutoffType,
   onCutoffChange,
+  refreshKey = 0,
+  onSyncComplete
 }) => {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,25 +51,44 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
         startDate,
         endDate,
         cutoffTime,
-        cutoffType
+        cutoffType,
+        forceRefresh: force
       });
       setData(res);
+      onSyncComplete?.();
     } catch (err: any) {
       setError(err.message || 'Failed to fetch executive dashboard data');
+      onSyncComplete?.();
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, [startDate, endDate, cutoffTime, cutoffType]);
+    fetchData(refreshKey > 0);
+  }, [startDate, endDate, cutoffTime, cutoffType, refreshKey]);
 
-  if (loading) return <LoadingState message="Calculating procurement error metrics and time-series..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchData} />;
+  if (loading) return <LoadingState message={`Fetching & computing Elexon wind metrics for ${startDate} to ${endDate}...`} />;
+  if (error) return <ErrorState message={error} onRetry={() => fetchData(true)} />;
   if (!data) return null;
 
   const { metrics, daily_summary, intervals } = data;
+
+  if (intervals.length === 0) {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <CutoffSelector
+          cutoffTime={cutoffTime}
+          cutoffType={cutoffType}
+          onCutoffChange={onCutoffChange}
+        />
+        <EmptyState
+          title="No Wind Generation Records Found"
+          description={`Elexon BMRS has no recorded generation actuals or forecasts for ${startDate} to ${endDate}. If you selected a future date, generation has not occurred yet. Try selecting recent live dates (e.g. Oct 20–24) or the January 2026 archive.`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

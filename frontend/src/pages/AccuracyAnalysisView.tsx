@@ -14,6 +14,7 @@ import { ErrorDistributionChart } from '../components/charts/ErrorDistributionCh
 import { IntervalDataTable } from '../components/tables/IntervalDataTable';
 import { LoadingState } from '../components/common/LoadingState';
 import { ErrorState } from '../components/common/ErrorState';
+import { EmptyState } from '../components/common/EmptyState';
 
 interface AccuracyAnalysisViewProps {
   startDate: string;
@@ -21,6 +22,7 @@ interface AccuracyAnalysisViewProps {
   cutoffTime: string;
   cutoffType: string;
   onCutoffChange: (time: string, type: string) => void;
+  refreshKey?: number;
 }
 
 export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
@@ -28,14 +30,15 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
   endDate,
   cutoffTime,
   cutoffType,
-  onCutoffChange
+  onCutoffChange,
+  refreshKey = 0
 }) => {
   const [data, setData] = useState<AccuracyResponse | null>(null);
   const [binWidth, setBinWidth] = useState<number>(500);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAccuracy = async () => {
+  const fetchAccuracy = async (force = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +47,8 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
         endDate,
         cutoffTime,
         cutoffType,
-        binWidth
+        binWidth,
+        forceRefresh: force
       });
       setData(res);
     } catch (err: any) {
@@ -55,14 +59,30 @@ export const AccuracyAnalysisView: React.FC<AccuracyAnalysisViewProps> = ({
   };
 
   useEffect(() => {
-    fetchAccuracy();
-  }, [startDate, endDate, cutoffTime, cutoffType, binWidth]);
+    fetchAccuracy(refreshKey > 0);
+  }, [startDate, endDate, cutoffTime, cutoffType, binWidth, refreshKey]);
 
-  if (loading) return <LoadingState message="Computing statistical accuracy metrics and error distributions..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchAccuracy} />;
+  if (loading) return <LoadingState message={`Computing statistical accuracy metrics for ${startDate} to ${endDate}...`} />;
+  if (error) return <ErrorState message={error} onRetry={() => fetchAccuracy(true)} />;
   if (!data) return null;
 
   const { metrics, distribution, detailed_intervals, notes } = data;
+
+  if (detailed_intervals.length === 0) {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <CutoffSelector
+          cutoffTime={cutoffTime}
+          cutoffType={cutoffType}
+          onCutoffChange={onCutoffChange}
+        />
+        <EmptyState
+          title="No Accuracy Intervals Found"
+          description={`No recorded half-hourly wind generation intervals exist for ${startDate} to ${endDate}. Try selecting recent live dates or the benchmark dataset.`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

@@ -11,6 +11,10 @@ interface AppLayoutProps {
   cutoffTime: string;
   cutoffType: string;
   onDatePresetSelect: (start: string, end: string) => void;
+  onRefreshLive?: () => void;
+  isSyncing?: boolean;
+  onBack?: () => void;
+  canGoBack?: boolean;
   children: React.ReactNode;
 }
 
@@ -22,6 +26,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   cutoffTime,
   cutoffType,
   onDatePresetSelect,
+  onRefreshLive,
+  isSyncing,
+  onBack,
+  canGoBack,
   children
 }) => {
   return (
@@ -35,6 +43,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           cutoffTime={cutoffTime}
           cutoffType={cutoffType}
           onDatePresetSelect={onDatePresetSelect}
+          onRefreshLive={onRefreshLive}
+          isSyncing={isSyncing}
+          onBack={onBack}
+          canGoBack={canGoBack}
         />
         <main className="flex-1 p-8">
           {children}

@@ -13,7 +13,8 @@ def get_dashboard_data(
     end_date: str = Query("2026-01-07", description="Delivery end date YYYY-MM-DD"),
     cutoff_time: str = Query("12:00", description="Cutoff time HH:MM UK local time"),
     cutoff_type: str = Query("day_ahead", description="'day_ahead' (D-1) or 'same_day' (D-0)"),
-    custom_cutoff: Optional[str] = Query(None, description="Explicit UTC cutoff timestamp override")
+    custom_cutoff: Optional[str] = Query(None, description="Explicit UTC cutoff timestamp override"),
+    force_refresh: bool = Query(False, description="Force real-time re-fetch from Elexon BMRS")
 ):
     """
     Executive Dashboard endpoint returning:
@@ -24,6 +25,9 @@ def get_dashboard_data(
     # Validation
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="start_date must be less than or equal to end_date")
+
+    if force_refresh:
+        ForecastService.ensure_date_range_cached(start_date, end_date, force_refresh=True)
 
     intervals = ForecastService.get_forecasts_and_actuals(
         start_date=start_date,

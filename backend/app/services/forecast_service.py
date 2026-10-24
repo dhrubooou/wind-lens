@@ -39,10 +39,14 @@ class ForecastService:
 
         hour = settings.DEFAULT_CUTOFF_HOUR
         minute = settings.DEFAULT_CUTOFF_MINUTE
-        if cutoff_time_str:
-            parts = cutoff_time_str.split(":")
-            hour = int(parts[0])
-            minute = int(parts[1]) if len(parts) > 1 else 0
+        if cutoff_time_str and ":" in cutoff_time_str:
+            try:
+                parts = cutoff_time_str.split(":")
+                hour = int(parts[0])
+                minute = int(parts[1]) if len(parts) > 1 else 0
+            except (ValueError, TypeError):
+                hour = settings.DEFAULT_CUTOFF_HOUR
+                minute = settings.DEFAULT_CUTOFF_MINUTE
 
         if cutoff_type == "day_ahead":
             # D-1 at configured time in UK local time
@@ -53,6 +57,42 @@ class ForecastService:
 
         cutoff_utc = cutoff_local.astimezone(timezone.utc)
         return cutoff_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @classmethod
+    def ensure_date_range_cached(cls, start_date: str, end_date: str, db_path: Optional[str] = None, force_refresh: bool = False):
+        """
+        Check if the requested delivery date range exists in the local SQLite cache.
+        If missing or force_refresh is True, dynamically fetch live observations from Elexon BMRS.
+        """
+        if db_path is not None:
+            # During isolated tests with mock db, do not trigger external HTTP requests
+            return
+
+        try:
+            d_start = datetime.fromisoformat(start_date).date()
+            d_end = datetime.fromisoformat(end_date).date()
+            expected_days = (d_end - d_start).days + 1
+
+            with get_db_connection(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT COUNT(DISTINCT settlement_date)
+                    FROM actual_generation
+                    WHERE settlement_date >= ? AND settlement_date <= ?;
+                """, (start_date, end_date))
+                count = cursor.fetchone()[0]
+
+            if count < expected_days or force_refresh:
+                from app.services.ingestion import IngestionService
+                logger.info(f"Auto-fetching Elexon BMRS actuals and forecasts for {start_date} to {end_date}...")
+                service = IngestionService(db_path=db_path)
+                service.ingest_actuals(start_date, end_date)
+                
+                # Fetch forecasts published leading up to delivery (starting 2 days prior to start_date for D-1 lookups)
+                fc_pub_start = (d_start - timedelta(days=2)).isoformat()
+                service.ingest_forecasts(fc_pub_start, end_date)
+        except Exception as e:
+            logger.warning(f"Dynamic Elexon fetch error for {start_date} to {end_date}: {e}")
 
     @classmethod
     def get_forecasts_and_actuals(
@@ -71,6 +111,9 @@ class ForecastService:
         Strictly prevents look-ahead bias: publish_time <= applicable_cutoff.
         Error = forecast_mw - actual_mw (positive = overforecast, negative = underforecast).
         """
+        # Ensure data exists dynamically
+        cls.ensure_date_range_cached(start_date, end_date, db_path=db_path)
+
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
             
@@ -166,6 +209,10 @@ class ForecastService:
         Retrieve all forecast vintages published for a specific delivery interval,
         ordered by publish_time ASC (tracking evolution from long lead time to short lead time).
         """
+        # Ensure data for target date is cached
+        target_date = target_start_time[:10]
+        cls.ensure_date_range_cached(target_date, target_date, db_path=db_path)
+
         with get_db_connection(db_path) as conn:
             cursor = conn.cursor()
             

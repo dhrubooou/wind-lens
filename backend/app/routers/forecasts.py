@@ -20,6 +20,9 @@ def get_forecast_at_cutoff(
     Returns the latest eligible forecast published before the configured decision cutoff
     for the selected half-hourly delivery interval, along with actual generation and error.
     """
+    # Auto-fetch if delivery date not yet cached
+    ForecastService.ensure_date_range_cached(delivery_date, delivery_date)
+
     # 1. Look up actual generation record for this interval
     with get_db_connection() as conn:
         cursor = conn.cursor()

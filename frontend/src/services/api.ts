@@ -35,6 +35,7 @@ export const api = {
     cutoffTime?: string;
     cutoffType?: string;
     customCutoff?: string;
+    forceRefresh?: boolean;
   }): Promise<DashboardResponse> => {
     const q = new URLSearchParams({
       start_date: params.startDate,
@@ -44,6 +45,9 @@ export const api = {
     });
     if (params.customCutoff) {
       q.set('custom_cutoff', params.customCutoff);
+    }
+    if (params.forceRefresh) {
+      q.set('force_refresh', 'true');
     }
     return fetchJson(`${API_BASE}/dashboard?${q.toString()}`);
   },
@@ -78,6 +82,7 @@ export const api = {
     cutoffTime?: string;
     cutoffType?: string;
     binWidth?: number;
+    forceRefresh?: boolean;
   }): Promise<AccuracyResponse> => {
     const q = new URLSearchParams({
       start_date: params.startDate,
@@ -86,6 +91,9 @@ export const api = {
       cutoff_type: params.cutoffType || 'day_ahead',
       bin_width: (params.binWidth || 500).toString(),
     });
+    if (params.forceRefresh) {
+      q.set('force_refresh', 'true');
+    }
     return fetchJson(`${API_BASE}/accuracy?${q.toString()}`);
   },
 

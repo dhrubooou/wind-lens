@@ -13,7 +13,8 @@ def get_accuracy_analysis(
     cutoff_time: str = Query("12:00", description="Cutoff time HH:MM UK local time"),
     cutoff_type: str = Query("day_ahead", description="'day_ahead' or 'same_day'"),
     custom_cutoff: Optional[str] = Query(None, description="Explicit UTC cutoff timestamp override"),
-    bin_width: int = Query(500, ge=100, le=2000, description="MW bin width for error histogram")
+    bin_width: int = Query(500, ge=100, le=2000, description="MW bin width for error histogram"),
+    force_refresh: bool = Query(False, description="Force real-time re-fetch from Elexon BMRS")
 ):
     """
     Accuracy Analysis endpoint:
@@ -25,6 +26,9 @@ def get_accuracy_analysis(
     """
     if start_date > end_date:
         raise HTTPException(status_code=400, detail="start_date must be less than or equal to end_date")
+
+    if force_refresh:
+        ForecastService.ensure_date_range_cached(start_date, end_date, force_refresh=True)
 
     intervals = ForecastService.get_forecasts_and_actuals(
         start_date=start_date,

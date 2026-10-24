@@ -80,16 +80,40 @@ export const DecisionTimeExplorer: React.FC = () => {
           {/* Delivery Date Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              1. Delivery Date (January 2026)
+              1. Delivery Date (Any Date / Real-time)
             </label>
             <input
               type="date"
-              min="2026-01-01"
-              max="2026-01-31"
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
               className="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
+            <div className="flex items-center space-x-1.5 mt-1.5 text-[11px]">
+              <span className="text-slate-400">Quick:</span>
+              <button
+                type="button"
+                onClick={() => setDeliveryDate('2026-10-24')}
+                className="text-emerald-700 hover:underline font-medium"
+              >
+                ⚡ Oct 24
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setDeliveryDate('2026-10-23')}
+                className="text-emerald-700 hover:underline font-medium"
+              >
+                ⚡ Oct 23
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setDeliveryDate('2026-01-05')}
+                className="text-slate-600 hover:underline font-medium"
+              >
+                📁 Jan 5
+              </button>
+            </div>
           </div>
 
           {/* Settlement Period Selector */}
